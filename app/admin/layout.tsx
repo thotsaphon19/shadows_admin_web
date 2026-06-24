@@ -1,40 +1,46 @@
 'use client';
-// shadows-admin/app/admin/layout.tsx
+// app/admin/layout.tsx
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import Link from 'next/link';
 
 const NAV = [
-  { href: '/admin/dashboard',      icon: '📊', label: 'Dashboard'   },
-  { href: '/admin/tutors',         icon: '👨‍🏫', label: 'AI Tutors'   },
-  { href: '/admin/lessons',        icon: '📚', label: 'Lessons'     },
-  { href: '/admin/avatars',        icon: '🎭', label: 'Avatars'     },
-  { href: '/admin/users',          icon: '👥', label: 'Users'       },
-  { href: '/admin/notifications',  icon: '🔔', label: 'Notifications'},
-  { href: '/admin/tts',            icon: '🔊', label: 'TTS / Voice'  },
+  { href: '/admin/dashboard',     icon: '📊', label: 'Dashboard'    },
+  { href: '/admin/tutors',        icon: '👨‍🏫', label: 'AI Tutors'    },
+  { href: '/admin/lessons',       icon: '📚', label: 'Lessons'      },
+  { href: '/admin/avatars',       icon: '🎭', label: 'Avatars'      },
+  { href: '/admin/users',         icon: '👥', label: 'Users'        },
+  { href: '/admin/notifications', icon: '🔔', label: 'Notifications' },
+  { href: '/admin/tts',           icon: '🔊', label: 'TTS / Voice'   },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
+  const router   = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<any>(null);
+  const [user,    setUser]    = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, u => {
-      if (!u) { router.push('/login'); return; }
-      setUser(u);
+    const isAdmin = sessionStorage.getItem('shadows_admin');
+    const adminUser = sessionStorage.getItem('shadows_admin_user') ?? 'admin';
+    if (!isAdmin) {
+      router.push('/login');
+    } else {
+      setUser(adminUser);
       setLoading(false);
-    });
-    return unsub;
+    }
   }, []);
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('shadows_admin');
+    sessionStorage.removeItem('shadows_admin_user');
+    router.push('/login');
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-green-800 text-lg font-medium">กำลังโหลด...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-green-800 font-medium">กำลังโหลด...</div>
       </div>
     );
   }
@@ -57,7 +63,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 p-3 space-y-1">
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {NAV.map(item => (
             <Link
               key={item.href} href={item.href}
@@ -72,20 +78,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           ))}
         </nav>
 
-        {/* User */}
+        {/* User info */}
         <div className="p-4 border-t border-gray-200">
-          <div className="text-xs text-gray-400 mb-1 truncate">{user?.email}</div>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-7 h-7 bg-green-100 rounded-full flex items-center justify-center">
+              <span className="text-xs font-bold text-green-800">
+                {user.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <span className="text-sm font-medium text-gray-700">{user}</span>
+          </div>
           <button
-            onClick={() => signOut(auth).then(() => router.push('/login'))}
-            className="text-sm text-red-500 hover:text-red-700 font-medium"
+            onClick={handleLogout}
+            className="text-sm text-red-500 hover:text-red-700 font-medium flex items-center gap-1"
           >
-            ออกจากระบบ
+            🚪 ออกจากระบบ
           </button>
         </div>
       </aside>
 
       {/* Main content */}
-      <main className="ml-60 flex-1 p-8">{children}</main>
+      <main className="ml-60 flex-1 p-8 min-h-screen">{children}</main>
     </div>
   );
 }
