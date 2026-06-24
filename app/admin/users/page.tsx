@@ -4,8 +4,20 @@ import { useEffect, useState } from 'react';
 import { collection, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
+interface UserDoc {
+  id: string;
+  displayName?: string;
+  email?: string;
+  package?: string;
+  totalPracticeMinutes?: number;
+  streakDays?: number;
+  avatarId?: string;
+  createdAt?: { seconds: number };
+  [key: string]: unknown;
+}
+
 export default function UsersPage() {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<UserDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
@@ -14,7 +26,7 @@ export default function UsersPage() {
 
   const loadUsers = async () => {
     const snap = await getDocs(collection(db, 'users'));
-    const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const list: UserDoc[] = snap.docs.map(d => ({ id: d.id, ...d.data() } as UserDoc));
     list.sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
     setUsers(list);
     setLoading(false);
@@ -22,7 +34,8 @@ export default function UsersPage() {
 
   const filtered = users.filter(u => {
     const q = search.toLowerCase();
-    const matchSearch = !q || (u.displayName ?? '').toLowerCase().includes(q)
+    const matchSearch = !q
+      || (u.displayName ?? '').toLowerCase().includes(q)
       || (u.email ?? '').toLowerCase().includes(q);
     const matchFilter = filter === 'all'
       || (filter === 'premium' && u.package === 'premium')
@@ -30,7 +43,7 @@ export default function UsersPage() {
     return matchSearch && matchFilter;
   });
 
-  const togglePremium = async (u: any) => {
+  const togglePremium = async (u: UserDoc) => {
     const newPkg = u.package === 'premium' ? 'free' : 'premium';
     await updateDoc(doc(db, 'users', u.id), { package: newPkg });
     setUsers(prev => prev.map(x => x.id === u.id ? { ...x, package: newPkg } : x));
@@ -49,7 +62,6 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {/* Search + Filter */}
       <div className="flex gap-3 mb-5">
         <input
           className="input flex-1" placeholder="ค้นหาชื่อหรือ email..."
@@ -69,7 +81,7 @@ export default function UsersPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
-                {['ชื่อ', 'Email', 'Package', 'ชั่วโมงฝึก', 'Streak', 'Avatar', 'จัดการ'].map(h => (
+                {['ชื่อ','Email','Package','ชั่วโมงฝึก','Streak','Avatar','จัดการ'].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>
                 ))}
               </tr>
@@ -85,13 +97,15 @@ export default function UsersPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-gray-600">
-                    {((u.totalPracticeMinutes ?? 0) / 60).toFixed(1)} h
+                    {(((u.totalPracticeMinutes as number) ?? 0) / 60).toFixed(1)} h
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{u.streakDays ?? 0} 🔥</td>
+                  <td className="px-4 py-3 text-gray-600">{(u.streakDays as number) ?? 0} 🔥</td>
                   <td className="px-4 py-3 text-gray-400">{u.avatarId ?? '0'}</td>
                   <td className="px-4 py-3">
                     <button
-                      className={u.package === 'premium' ? 'btn-secondary text-xs py-1 px-3' : 'btn-primary text-xs py-1 px-3'}
+                      className={u.package === 'premium'
+                        ? 'btn-secondary text-xs py-1 px-3'
+                        : 'btn-primary text-xs py-1 px-3'}
                       onClick={() => togglePremium(u)}
                     >
                       {u.package === 'premium' ? '↓ ลด Free' : '↑ อัป Premium'}
